@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lanzi Lab EndNote Tool</title>
+    <link rel="icon" type="image/png" href="/static/icon.png">
+    <link rel="shortcut icon" type="image/x-icon" href="/static/favicon.ico">
+    <style>
+        :root {
+            --user-font-size: 16px;
+            --focus-multiplier: 1;
+            --bg-color: #f4f7f6;
+            --text-color: #333333;
+            --primary-color: #005f40;
+            --secondary-color: #ffffff;
+            --border-color: #cccccc;
+        }
+
+        html { font-size: calc(var(--user-font-size) * var(--focus-multiplier)); transition: font-size 0.2s ease; }
+
+        body.focus-mode {
+            --focus-multiplier: 2;
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --primary-color: #000000;
+            --secondary-color: #ffffff;
+            --border-color: #000000;
+        }
+
+        body.high-contrast {
+            --bg-color: #000000 !important;
+            --text-color: #ffff00 !important;
+            --primary-color: #ffff00 !important;
+            --secondary-color: #1a1a1a !important;
+            --border-color: #ffff00 !important;
+        }
+
+        body { font-family: Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); padding: 2rem; line-height: 1.5; }
+
+        button, select, input, textarea, .group-btn { font-family: inherit; font-size: 1rem !important; line-height: 1.2; }
+
+        header { display: flex; justify-content: space-between; align-items: center; border-bottom: 0.2rem solid var(--primary-color); padding-bottom: 1rem; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem; }
+
+        .accessibility-controls { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+        .accessibility-controls button { color: #ffffff; border: 0.1rem solid rgba(0,0,0,0.1); padding: 0.6rem 1.2rem; cursor: pointer; font-weight: bold; border-radius: 6px; }
+
+        .btn-size-minus { background-color: #4a90e2; }
+        .btn-size-plus { background-color: #357abd; }
+        .btn-contrast-toggle { background-color: #f5a623; color: #000 !important; }
+        .btn-focus-toggle { background-color: #9013fe; }
+        .btn-narrator-toggle { background-color: #d0021b; }
+        .btn-voice-toggle { background-color: #00897b; }
+
+        #sync-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1.2rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            flex-wrap: wrap;
+        }
+        #sync-banner.status-loading { background: #fff8e1; border: 1px solid #f9a825; color: #5d4037; }
+        #sync-banner.status-ok      { background: #e8f5e9; border: 1px solid #388e3c; color: #1b5e20; }
+        #sync-banner.status-error   { background: #ffebee; border: 1px solid #c62828; color: #b71c1c; }
+
+        #sync-banner .banner-left { display: flex; align-items: center; gap: 0.6rem; }
+        #sync-banner .sync-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-loading .sync-dot { background: #f9a825; animation: pulse 1.2s infinite; }
+        .status-ok .sync-dot      { background: #388e3c; }
+        .status-error .sync-dot   { background: #c62828; }
+
+        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+        #btn-sync { background: none; border: 1px solid currentColor; color: inherit; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem !important; }
+        #btn-sync:hover { opacity: 0.75; }
+
+        .step-container { background-color: var(--secondary-color); padding: 1.5rem; border-radius: 8px; border: 0.1rem solid var(--border-color); margin-bottom: 1.5rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .step-title { margin-top: 0; color: var(--primary-color); font-size: 1.4rem; margin-bottom: 1rem; font-weight: bold; }
+
+        .button-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: 1rem; }
+        .group-btn { background-color: var(--secondary-color); color: var(--primary-color); border: 0.2rem solid var(--primary-color); border-radius: 6px; padding: 1rem; cursor: pointer; font-weight: bold; text-align: center; }
+        .group-btn[aria-pressed="true"] { background-color: var(--primary-color); color: var(--secondary-color); }
+
+        .btn-primary { background-color: var(--primary-color); color: var(--secondary-color); border: 0.15rem solid var(--primary-color); padding: 0.8rem 1.5rem; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-excel { background-color: #1d6f42; border-color: #1d6f42; }
+        .btn-secondary { background-color: #e0e0e0; color: #333; border: 0.1rem solid #ccc; padding: 0.8rem 1.5rem; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .btn-disabled { background-color: #ccc !important; border-color: #bbb !important; color: #666 !important; cursor: not-allowed !important; opacity: 0.7; }
+
+        .results-section { background-color: var(--secondary-color); padding: 1.5rem; border-radius: 8px; border: 0.25rem solid var(--primary-color); margin-top: 2rem; }
+        .results-content { margin-top: 1rem; padding: 1.2rem; background-color: var(--bg-color); border: 0.1rem solid var(--border-color); min-height: 15rem; }
+
+        .focus-nav { display: none; margin-top: 2rem; justify-content: space-between; border-top: 0.2rem solid var(--border-color); padding-top: 1.5rem; }
+        body.focus-mode .focus-nav { display: flex; }
+        body.focus-mode .focus-section { display: none; }
+        body.focus-mode .focus-section.active-focus { display: block; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Lanzi Lab EndNote Tool</h1>
+        <div class="accessibility-controls">
+            <button class="btn-size-minus" onclick="changeFontSize(-2)">A-</button>
+            <button class="btn-size-plus" onclick="changeFontSize(2)">A+</button>
+            <button class="btn-contrast-toggle" onclick="toggleHighContrast()">Contrast</button>
+            <button class="btn-focus-toggle" onclick="toggleFocusMode()" id="btn-focus">Focus Mode</button>
+            <button class="btn-narrator-toggle" onclick="toggleNarrator()" id="btn-narrator">&#127897; Narrator Off</button>
+            <button class="btn-voice-toggle" onclick="toggleVoiceControl()" id="btn-voice">&#127908; Voice Control Off</button>
+        </div>
+    </header>
+
+    <div id="sync-banner" class="status-loading">
+        <div class="banner-left">
+            <div class="sync-dot"></div>
+            <span id="sync-message">Connecting to library database...</span>
+        </div>
+        <button id="btn-sync" onclick="triggerSync()" title="Re-sync database from OneDrive">&#8635; Sync Now</button>
+    </div>
+
+    <main>
+        <div class="step-container focus-section active-focus">
+            <h2 class="step-title">Step 1: Choose Your Collection(s)</h2>
+            <div class="button-grid" id="group-buttons-container">
+                <button class="group-btn" id="btn-all" onclick="selectGroup('All')" aria-pressed="true">All References</button>
+            </div>
+            <div class="focus-nav">
+                <span></span>
+                <button class="btn-primary" onclick="nextFocus()">Next Step &#10148;</button>
+            </div>
+        </div>
+
+        <div class="step-container focus-section">
+            <h2 class="step-title">Step 2: Refine Results</h2>
+            <div style="display:flex; gap:1rem; flex-wrap:wrap; align-items: center;">
+                <select id="secondary-category" onchange="toggleRefValueInput()">
+                    <option value="Keyword">Keyword</option>
+                    <option value="Author">Author</option>
+                    <option value="Primary Author">Primary Author</option>
+                    <option value="Year">Year</option>
+                    <option value="Journal">Journal</option>
+                    <option value="Title">Title</option>
+                    <option value="Reference Type">Reference Type</option>
+                </select>
+                <div id="value-input-container" style="flex-grow:1;"><input type="text" id="secondary-value" onkeypress="if(event.key==='Enter') addSecondaryFilter()" placeholder="Type here..."></div>
+                <div id="ref-type-container" style="display:none; flex-grow:1;">
+                    <select id="secondary-ref-type">
+                        <option value="Journal Article">Journal Article</option>
+                        <option value="Video">Video / Audiovisual</option>
+                        <option value="Book">Book</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="addSecondaryFilter()">+ Add</button>
+                <button class="btn-secondary" onclick="clearRefinements()">Clear All</button>
+            </div>
+            <div id="chip-area" style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
+            <div class="focus-nav">
+                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
+                <button class="btn-primary" onclick="nextFocus()">Next Step &#10148;</button>
+            </div>
+        </div>
+
+        <div class="step-container focus-section">
+            <h2 class="step-title">Step 3: Generate Output</h2>
+            <div style="display:flex; flex-direction:column; gap:1.5rem;">
+                <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+                    <button class="btn-primary btn-excel" onclick="exportExcel()">Export to Excel</button>
+                    <button class="btn-primary btn-disabled" onclick="alertPdfUnavailable()" title="PDF download is only available in the desktop app">Download PDFs</button>
+                </div>
+                <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+                    <span style="font-weight:bold;">Cite:</span>
+                    <select id="output-format">
+                        <option value="APA">APA 7th</option>
+                        <option value="MLA">MLA 9th</option>
+                        <option value="AMA">AMA</option>
+                        <option value="Pure Links">Pure Links Only</option>
+                    </select>
+                    <button class="btn-primary" id="btn-generate" onclick="generateReferences()">Generate References</button>
+                </div>
+            </div>
+            <div class="focus-nav">
+                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
+                <button class="btn-primary" onclick="nextFocus()">View Results &#10148;</button>
+            </div>
+        </div>
+
+        <section class="results-section focus-section">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 style="margin:0;">Results</h2>
+                <button class="btn-secondary" onclick="copyRichText()">&#128203; Copy to Word</button>
+            </div>
+            <div class="results-content" id="results-area"><em>References will appear here...</em></div>
+            <div class="focus-nav">
+                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
+                <button class="btn-primary" onclick="toggleFocusMode()">Exit Focus Mode</button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        let currentFontSize = 16, isNarratorActive = false, isVoiceActive = false,
+            isMutedForSpeech = false, activeFilters = [], currentFocusStep = 0;
+        let recognition;
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        function updateBanner(data) {
+            const banner = document.getElementById('sync-banner');
+            const msg = document.getElementById('sync-message');
+            if (data.ready) {
+                banner.className = 'status-ok';
+                msg.textContent = 'Library loaded \u2713  (last synced: ' + data.last_sync + ')';
+            } else {
+                banner.className = (data.message.startsWith('Starting') || data.message.startsWith('Sync')) ? 'status-loading' : 'status-error';
+                msg.textContent = data.message;
+            }
+        }
+
+        function pollStatus() {
+            fetch('/api/status').then(r => r.json()).then(data => {
+                updateBanner(data);
+                if (!data.ready) { setTimeout(pollStatus, 3000); }
+                else { loadFilters(); }
+            }).catch(() => setTimeout(pollStatus, 5000));
+        }
+
+        function triggerSync() {
+            document.getElementById('sync-message').textContent = 'Syncing...';
+            document.getElementById('sync-banner').className = 'status-loading';
+            fetch('/api/sync', { method: 'POST' }).then(() => setTimeout(pollStatus, 2000));
+        }
+
+        function loadFilters() {
+            fetch('/api/get_filters').then(r => r.json()).then(data => {
+                if (data.error && !data.groups.length) return;
+                const container = document.getElementById('group-buttons-container');
+                Array.from(container.querySelectorAll('.group-btn:not(#btn-all)')).forEach(b => b.remove());
+                data.groups.forEach(g => {
+                    const b = document.createElement('button');
+                    b.className = 'group-btn'; b.innerText = g;
+                    b.setAttribute('aria-pressed', 'false');
+                    b.onclick = () => selectGroup(g);
+                    container.appendChild(b);
+                });
+            });
+        }
+
+        function narrate(text) {
+            if (!isNarratorActive) return;
+            isMutedForSpeech = true;
+            if (recognition && isVoiceActive) recognition.stop();
+            window.speechSynthesis.cancel();
+            let utter = new SpeechSynthesisUtterance(text);
+            utter.onend = () => { setTimeout(() => { isMutedForSpeech = false; if (isVoiceActive && recognition) recognition.start(); }, 400); };
+            window.speechSynthesis.speak(utter);
+        }
+
+        function toggleNarrator() {
+            isNarratorActive = !isNarratorActive;
+            document.getElementById('btn-narrator').innerText = isNarratorActive ? "\uD83C\uDF99 Narrator On" : "\uD83C\uDF99 Narrator Off";
+            if (isNarratorActive) narrate("Narrator active.");
+        }
+
+        function toggleVoiceControl() {
+            if (!SpeechRec) { narrate("Voice control not supported."); return; }
+            isVoiceActive = !isVoiceActive;
+            const btn = document.getElementById('btn-voice');
+            if (isVoiceActive) { btn.innerText = "\uD83C\uDF99 Voice Control On"; if (!isNarratorActive) toggleNarrator(); startListening(); }
+            else { btn.innerText = "\uD83C\uDF99 Voice Control Off"; if (recognition) recognition.stop(); }
+        }
+
+        function startListening() {
+            recognition = new SpeechRec();
+            recognition.continuous = true;
+            recognition.onresult = (e) => {
+                if (isMutedForSpeech) return;
+                const cmd = e.results[e.results.length - 1][0].transcript.toLowerCase();
+                handleSmartVoiceCommand(cmd);
+            };
+            recognition.onend = () => { if (isVoiceActive && !isMutedForSpeech) recognition.start(); };
+            recognition.start();
+        }
+
+        function handleSmartVoiceCommand(cmd) {
+            let clean = cmd.toLowerCase().replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, "")
+                           .replace(/\b(the|group|collection|folder|open|show|me)\b/g, '').trim();
+            if (!clean || clean.length < 2) return;
+            const btns = Array.from(document.querySelectorAll('.group-btn')).sort((a, b) => b.innerText.length - a.innerText.length);
+            let match = btns.find(b => b.innerText.toLowerCase().trim() === clean) || btns.find(b => b.innerText.toLowerCase().includes(clean));
+            if (match) { selectGroup(match.innerText); narrate("Selected " + match.innerText); }
+            else if (clean.includes("generate") || clean.includes("search")) { generateReferences(); }
+            else if (clean.includes("excel")) { exportExcel(); }
+            else if (clean.includes("back")) { prevFocus(); }
+            else if (clean.includes("next")) { nextFocus(); }
+            else if (clean.includes("clear")) { clearRefinements(); }
+            else { narrate("I heard " + clean + " but no match found."); }
+        }
+
+        function changeFontSize(v) { currentFontSize += v; document.documentElement.style.setProperty('--user-font-size', currentFontSize + 'px'); }
+        function toggleFocusMode() {
+            document.body.classList.toggle('focus-mode');
+            if (document.body.classList.contains('focus-mode')) { currentFocusStep = 0; updateFocusView(); }
+        }
+        function toggleHighContrast() { document.body.classList.toggle('high-contrast'); }
+
+        function selectGroup(name) {
+            const allBtn = document.getElementById('btn-all');
+            if (name === 'All') {
+                activeFilters = activeFilters.filter(f => f.type !== 'Primary');
+                document.querySelectorAll('.group-btn').forEach(b => b.setAttribute('aria-pressed', 'false'));
+                allBtn.setAttribute('aria-pressed', 'true');
+            } else {
+                allBtn.setAttribute('aria-pressed', 'false');
+                const btn = Array.from(document.querySelectorAll('.group-btn')).find(b => b.innerText.trim() === name.trim());
+                if (!btn) return;
+                const isPressed = btn.getAttribute('aria-pressed') === 'true';
+                btn.setAttribute('aria-pressed', (!isPressed).toString());
+                if (isPressed) activeFilters = activeFilters.filter(f => !(f.type === 'Primary' && f.value === name));
+                else activeFilters.push({ id: Date.now(), type: 'Primary', value: name });
+                if (!activeFilters.some(f => f.type === 'Primary')) selectGroup('All');
+            }
+            redrawChips();
+        }
+
+        function toggleRefValueInput() {
+            const cat = document.getElementById('secondary-category').value;
+            document.getElementById('value-input-container').style.display = (cat === "Reference Type") ? 'none' : 'block';
+            document.getElementById('ref-type-container').style.display = (cat === "Reference Type") ? 'block' : 'none';
+        }
+
+        function addSecondaryFilter() {
+            const cat = document.getElementById('secondary-category').value;
+            let val = (cat === "Reference Type") ? document.getElementById('secondary-ref-type').value : document.getElementById('secondary-value').value;
+            if (!val || !val.trim()) return;
+            activeFilters.push({ id: Date.now(), type: 'Secondary', category: cat, value: val, condition: 'contains' });
+            if (cat !== "Reference Type") document.getElementById('secondary-value').value = '';
+            redrawChips();
+        }
+
+        function clearRefinements() { activeFilters = activeFilters.filter(f => f.type === 'Primary'); redrawChips(); }
+
+        function redrawChips() {
+            const container = document.getElementById('chip-area'); container.innerHTML = '';
+            activeFilters.forEach(f => {
+                const chip = document.createElement('div');
+                chip.style.cssText = "background:#e0e7e4; color:#005f40; padding:0.4rem 0.8rem; border-radius:2rem; font-weight:bold; border:1px solid #005f40;";
+                chip.innerText = f.type === 'Primary' ? f.value : f.category + ': ' + f.value;
+                container.appendChild(chip);
+            });
+        }
+
+        function generateReferences() {
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ format: document.getElementById('output-format').value, filters: activeFilters })
+            }).then(r => r.json()).then(data => {
+                document.getElementById('results-area').innerHTML = data.html;
+                narrate("Search complete. " + data.count + " papers found.");
+                if (document.body.classList.contains('focus-mode')) { currentFocusStep = 3; updateFocusView(); }
+            });
+        }
+
+        function copyRichText() {
+            const el = document.getElementById('results-area');
+            const blobHtml = new Blob([el.innerHTML], { type: "text/html" });
+            navigator.clipboard.write([new ClipboardItem({ "text/html": blobHtml, "text/plain": new Blob([el.innerText], { type: "text/plain" }) })]).then(() => alert("Copied!"));
+        }
+
+        function exportExcel() {
+            fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: activeFilters }) })
+                .then(r => r.blob()).then(blob => {
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "Lanzi_Lab_References.xlsx"; a.click();
+                });
+        }
+
+        function alertPdfUnavailable() {
+            alert("PDF download is only available in the desktop app (Windows .exe or Mac .app).\n\nDownload the desktop version from your lab's OneDrive.");
+        }
+
+        function nextFocus() { currentFocusStep++; updateFocusView(); }
+        function prevFocus() { currentFocusStep--; updateFocusView(); }
+        function updateFocusView() { document.querySelectorAll('.focus-section').forEach((s, i) => s.classList.toggle('active-focus', i === currentFocusStep)); }
+
+        document.addEventListener("DOMContentLoaded", pollStatus);
+    </script>
+</body>
+</html>
