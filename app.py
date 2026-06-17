@@ -228,7 +228,7 @@ def upload_library():
 @app.route('/api/get_filters')
 def get_filters():
     if not DB_STATUS['ready']:
-        return jsonify({"groups": [], "error": DH_STATUS['message']})
+        return jsonify({"groups": [], "error": DB_STATUS['message']})
     try:
         conn = sqlite3.connect(TEMP_DB)
         cursor = conn.cursor()
