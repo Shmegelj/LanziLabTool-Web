@@ -52,32 +52,44 @@
         .btn-narrator-toggle { background-color: #d0021b; }
         .btn-voice-toggle { background-color: #00897b; }
 
+        /* --- UPLOAD / STATUS BANNER --- */
         #sync-banner {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 1rem;
-            padding: 0.75rem 1.2rem;
-            border-radius: 6px;
+            border-radius: 8px;
             margin-bottom: 1.5rem;
-            font-size: 0.9rem;
-            flex-wrap: wrap;
         }
-        #sync-banner.status-loading { background: #fff8e1; border: 1px solid #f9a825; color: #5d4037; }
-        #sync-banner.status-ok      { background: #e8f5e9; border: 1px solid #388e3c; color: #1b5e20; }
-        #sync-banner.status-error   { background: #ffebee; border: 1px solid #c62828; color: #b71c1c; }
+        #sync-banner.status-upload { background: #e3f2fd; border: 2px solid #1565c0; color: #0d47a1; padding: 1.5rem 1.75rem; }
+        #sync-banner.status-ok     { background: #e8f5e9; border: 1px solid #388e3c; color: #1b5e20; padding: 0.75rem 1.2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+        #sync-banner.status-error  { background: #ffebee; border: 1px solid #c62828; color: #b71c1c; padding: 0.75rem 1.2rem; display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
 
-        #sync-banner .banner-left { display: flex; align-items: center; gap: 0.6rem; }
-        #sync-banner .sync-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .status-loading .sync-dot { background: #f9a825; animation: pulse 1.2s infinite; }
-        .status-ok .sync-dot      { background: #388e3c; }
-        .status-error .sync-dot   { background: #c62828; }
+        .sync-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .status-ok .sync-dot   { background: #388e3c; }
+        .status-error .sync-dot { background: #c62828; }
 
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+        #connect-btn {
+            display: inline-block;
+            background: #005f40;
+            color: white;
+            border: none;
+            padding: 1.25rem 2.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem !important;
+            font-weight: bold;
+        }
+        #connect-btn:hover:not(:disabled) { background: #004d33; }
+        #connect-btn:disabled { opacity: 0.7; cursor: wait; }
 
-        #btn-sync { background: none; border: 1px solid currentColor; color: inherit; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem !important; }
-        #btn-sync:hover { opacity: 0.75; }
+        #replace-btn { background: none; border: 1px solid currentColor; color: inherit; padding: 0.3rem 0.8rem; border-radius: 4px; cursor: pointer; font-size: 0.85rem !important; }
+        #replace-btn:hover { opacity: 0.75; }
 
+        #fallback-section label {
+            display: inline-block; background: #1565c0; color: white; border: none;
+            padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer;
+            font-size: 0.95rem !important; font-weight: bold;
+        }
+        #fallback-section label:hover { background: #0d47a1; }
+
+        /* --- REST OF UI (unchanged from desktop) --- */
         .step-container { background-color: var(--secondary-color); padding: 1.5rem; border-radius: 8px; border: 0.1rem solid var(--border-color); margin-bottom: 1.5rem; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .step-title { margin-top: 0; color: var(--primary-color); font-size: 1.4rem; margin-bottom: 1rem; font-weight: bold; }
 
@@ -108,17 +120,39 @@
             <button class="btn-size-plus" onclick="changeFontSize(2)">A+</button>
             <button class="btn-contrast-toggle" onclick="toggleHighContrast()">Contrast</button>
             <button class="btn-focus-toggle" onclick="toggleFocusMode()" id="btn-focus">Focus Mode</button>
-            <button class="btn-narrator-toggle" onclick="toggleNarrator()" id="btn-narrator">&#127897; Narrator Off</button>
-            <button class="btn-voice-toggle" onclick="toggleVoiceControl()" id="btn-voice">&#127908; Voice Control Off</button>
+            <button class="btn-narrator-toggle" onclick="toggleNarrator()" id="btn-narrator">🎙 Narrator Off</button>
+            <button class="btn-voice-toggle" onclick="toggleVoiceControl()" id="btn-voice">🎤 Voice Control Off</button>
         </div>
     </header>
 
-    <div id="sync-banner" class="status-loading">
-        <div class="banner-left">
-            <div class="sync-dot"></div>
-            <span id="sync-message">Connecting to library database...</span>
+    <!-- UPLOAD / STATUS BANNER -->
+    <div id="sync-banner" class="status-upload">
+
+        <!-- Upload panel (shown until library is connected) -->
+        <div id="upload-panel">
+            <p style="font-size:1.3rem; font-weight:bold; margin:0 0 0.6rem;">&#128218; Connect your research library</p>
+            <p style="margin:0 0 1.25rem; font-size:1.05rem; max-width:620px; line-height:1.6;">
+                Click the green button. In the window that opens, find <strong>"OneDrive&nbsp;&#8209;&nbsp;UAB"</strong> on the <strong>left side</strong> and click it. Then click <strong>"Select&nbsp;Folder"</strong>.
+                The library loads automatically &mdash; and every time after that, it loads itself.
+            </p>
+            <button id="connect-btn" onclick="connectOneDrive()">&#128194; Connect OneDrive Folder</button>
+            <div role="status" aria-live="polite" id="upload-status" style="margin-top:0.85rem; font-size:0.95rem; font-style:italic;"></div>
+
+            <!-- Fallback: shown on Firefox, or if path traversal fails -->
+            <div id="fallback-section" style="display:none; margin-top:1.25rem; border-top:1px solid rgba(21,101,192,0.35); padding-top:1rem;">
+                <p style="margin:0 0 0.6rem; font-size:0.92rem;">Or find the file manually (look for <strong>sdb.eni</strong>):</p>
+                <label for="eni-file-input">&#128193; Browse for sdb.eni</label>
+                <input type="file" id="eni-file-input" accept=".eni" style="display:none;" onchange="uploadLibraryFallback(this)">
+            </div>
         </div>
-        <button id="btn-sync" onclick="triggerSync()" title="Re-sync database from OneDrive">&#8635; Sync Now</button>
+
+        <!-- Ready panel (shown after library loads) -->
+        <div id="ready-panel" style="display:none;">
+            <div class="sync-dot"></div>
+            <span id="sync-message">Library loaded</span>
+            <button id="replace-btn" onclick="updateLibrary()">&#8593; Update Library</button>
+        </div>
+
     </div>
 
     <main>
@@ -129,7 +163,7 @@
             </div>
             <div class="focus-nav">
                 <span></span>
-                <button class="btn-primary" onclick="nextFocus()">Next Step &#10148;</button>
+                <button class="btn-primary" onclick="nextFocus()">Next Step ➔</button>
             </div>
         </div>
 
@@ -158,8 +192,8 @@
             </div>
             <div id="chip-area" style="margin-top:1rem; display:flex; gap:0.5rem; flex-wrap:wrap;"></div>
             <div class="focus-nav">
-                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
-                <button class="btn-primary" onclick="nextFocus()">Next Step &#10148;</button>
+                <button class="btn-secondary" onclick="prevFocus()">⬅ Back</button>
+                <button class="btn-primary" onclick="nextFocus()">Next Step ➔</button>
             </div>
         </div>
 
@@ -182,19 +216,19 @@
                 </div>
             </div>
             <div class="focus-nav">
-                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
-                <button class="btn-primary" onclick="nextFocus()">View Results &#10148;</button>
+                <button class="btn-secondary" onclick="prevFocus()">⬅ Back</button>
+                <button class="btn-primary" onclick="nextFocus()">View Results ➔</button>
             </div>
         </div>
 
         <section class="results-section focus-section">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2 style="margin:0;">Results</h2>
-                <button class="btn-secondary" onclick="copyRichText()">&#128203; Copy to Word</button>
+                <button class="btn-secondary" onclick="copyRichText()">📋 Copy to Word</button>
             </div>
             <div class="results-content" id="results-area"><em>References will appear here...</em></div>
             <div class="focus-nav">
-                <button class="btn-secondary" onclick="prevFocus()">&#11013; Back</button>
+                <button class="btn-secondary" onclick="prevFocus()">⬅ Back</button>
                 <button class="btn-primary" onclick="toggleFocusMode()">Exit Focus Mode</button>
             </div>
         </section>
@@ -206,36 +240,233 @@
         let recognition;
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-        function updateBanner(data) {
-            const banner = document.getElementById('sync-banner');
-            const msg = document.getElementById('sync-message');
-            if (data.ready) {
-                banner.className = 'status-ok';
-                msg.textContent = 'Library loaded \u2713  (last synced: ' + data.last_sync + ')';
+        // ============================================================
+        // ONEDRIVE CONNECTOR — File System Access API + IndexedDB
+        // ============================================================
+        const IDB_NAME = 'lanzilab', IDB_STORE = 'handles', IDB_KEY = 'onedrive-root';
+        // Known path from the OneDrive root folder down to sdb.eni
+        const ENI_PATH = ['GRP-IWTSC - Documents', 'EndNote Resource Library', 'IWTSC Endnote Library.Data', 'sdb'];
+        const ENI_FILE = 'sdb.eni';
+        let _cachedRootHandle = null;
+
+        // --- IndexedDB helpers ---
+        function openIDB() {
+            return new Promise((res, rej) => {
+                const r = indexedDB.open(IDB_NAME, 1);
+                r.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE);
+                r.onsuccess = e => res(e.target.result);
+                r.onerror = () => rej(r.error);
+            });
+        }
+        async function saveRootHandle(h) {
+            try {
+                const db = await openIDB();
+                await new Promise((res, rej) => {
+                    const tx = db.transaction(IDB_STORE, 'readwrite');
+                    tx.objectStore(IDB_STORE).put(h, IDB_KEY);
+                    tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+                });
+            } catch (e) { /* IndexedDB unavailable — non-fatal */ }
+        }
+        async function loadRootHandle() {
+            try {
+                const db = await openIDB();
+                return await new Promise((res, rej) => {
+                    const tx = db.transaction(IDB_STORE, 'readonly');
+                    const r = tx.objectStore(IDB_STORE).get(IDB_KEY);
+                    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+                });
+            } catch (e) { return null; }
+        }
+
+        // --- File System traversal ---
+        async function traverseToEni(root) {
+            let d = root;
+            for (const seg of ENI_PATH) d = await d.getDirectoryHandle(seg);
+            return await d.getFileHandle(ENI_FILE);
+        }
+        async function searchForEni(dir, depth = 0) {
+            if (depth > 6) return null;
+            // Check files first
+            for await (const [name, h] of dir.entries())
+                if (h.kind === 'file' && name.toLowerCase().endsWith('.eni')) return h;
+            // Then recurse
+            for await (const [name, h] of dir.entries())
+                if (h.kind === 'directory') { const f = await searchForEni(h, depth + 1); if (f) return f; }
+            return null;
+        }
+
+        // --- Upload a FileSystemFileHandle to the server ---
+        async function uploadFileHandle(fh) {
+            const file = await fh.getFile();
+            const fd = new FormData();
+            fd.append('file', file, file.name);
+            const r = await fetch('/api/upload', { method: 'POST', body: fd });
+            return await r.json();
+        }
+
+        // --- UI helpers ---
+        function setBannerStatus(msg) {
+            const el = document.getElementById('upload-status');
+            if (el) el.textContent = msg;
+        }
+        function setConnectBtn(label, disabled) {
+            const b = document.getElementById('connect-btn');
+            if (b) { b.textContent = label; b.disabled = !!disabled; }
+        }
+        function showFallback() {
+            document.getElementById('fallback-section').style.display = 'block';
+        }
+        function setLibraryReady(message) {
+            document.getElementById('upload-panel').style.display = 'none';
+            const rp = document.getElementById('ready-panel');
+            rp.style.display = 'flex';
+            document.getElementById('sync-message').textContent = message;
+            document.getElementById('sync-banner').className = 'status-ok';
+        }
+
+        // --- Core connect logic (used both on first connect and auto-reload) ---
+        async function findAndUpload(rootHandle) {
+            let fh = null;
+            setBannerStatus('Looking for library file…');
+            try { fh = await traverseToEni(rootHandle); }
+            catch (e) {
+                setBannerStatus('Searching for library file…');
+                try { fh = await searchForEni(rootHandle); } catch (e2) {}
+            }
+            if (!fh) return { success: false, error: 'sdb.eni not found in that folder.' };
+            setBannerStatus('Loading library…');
+            return await uploadFileHandle(fh);
+        }
+
+        // --- User-triggered connect (first time or reconnect) ---
+        async function connectOneDrive() {
+            if (!window.showDirectoryPicker) {
+                showFallback();
+                setBannerStatus('Your browser doesn\'t support folder access. Use Chrome or Edge, or try the manual option below.');
+                return;
+            }
+            setConnectBtn('⏳ Opening folder picker…', true);
+            setBannerStatus('');
+            let rootHandle;
+            try {
+                rootHandle = await window.showDirectoryPicker({ id: 'lanzilab-onedrive', mode: 'read', startIn: 'documents' });
+            } catch (e) {
+                setConnectBtn('📂 Connect OneDrive Folder', false);
+                if (e.name !== 'AbortError') setBannerStatus('Could not open folder picker. Try again.');
+                return;
+            }
+            const data = await findAndUpload(rootHandle);
+            if (data.success) {
+                _cachedRootHandle = rootHandle;
+                await saveRootHandle(rootHandle);
+                setLibraryReady('Library connected ✓ — will load automatically next time');
+                loadFilters();
             } else {
-                banner.className = (data.message.startsWith('Starting') || data.message.startsWith('Sync')) ? 'status-loading' : 'status-error';
-                msg.textContent = data.message;
+                setBannerStatus((data.error || 'Upload failed') + ' — Try selecting the "OneDrive - UAB" folder from the left sidebar of the picker.');
+                showFallback();
+                setConnectBtn('📂 Connect OneDrive Folder', false);
             }
         }
 
-        function pollStatus() {
-            fetch('/api/status').then(r => r.json()).then(data => {
-                updateBanner(data);
-                if (!data.ready) { setTimeout(pollStatus, 3000); }
-                else { loadFilters(); }
-            }).catch(() => setTimeout(pollStatus, 5000));
+        // --- Update Library button (re-reads from stored handle, no picker) ---
+        async function updateLibrary() {
+            let h = _cachedRootHandle || await loadRootHandle();
+            if (!h) { connectOneDrive(); return; }
+            let perm = await h.queryPermission({ mode: 'read' });
+            if (perm === 'prompt') perm = await h.requestPermission({ mode: 'read' });
+            if (perm !== 'granted') { connectOneDrive(); return; }
+            // Flip back to upload panel briefly to show progress
+            document.getElementById('ready-panel').style.display = 'none';
+            document.getElementById('upload-panel').style.display = 'block';
+            document.getElementById('sync-banner').className = 'status-upload';
+            const data = await findAndUpload(h);
+            if (data.success) {
+                setLibraryReady('Library updated ✓ (' + new Date().toLocaleTimeString() + ')');
+                loadFilters();
+            } else {
+                setBannerStatus('Could not reload. Please reconnect.');
+                setConnectBtn('📂 Connect OneDrive Folder', false);
+            }
         }
 
-        function triggerSync() {
-            document.getElementById('sync-message').textContent = 'Syncing...';
-            document.getElementById('sync-banner').className = 'status-loading';
-            fetch('/api/sync', { method: 'POST' }).then(() => setTimeout(pollStatus, 2000));
+        // --- Fallback: plain file input for Firefox / manual override ---
+        function uploadLibraryFallback(input) {
+            const file = input.files[0];
+            if (!file) return;
+            setBannerStatus('Uploading…');
+            const fd = new FormData();
+            fd.append('file', file);
+            fetch('/api/upload', { method: 'POST', body: fd })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) { setLibraryReady('Library loaded ✓'); loadFilters(); }
+                    else setBannerStatus('Error: ' + (data.error || 'Upload failed'));
+                })
+                .catch(() => setBannerStatus('Upload failed. Check connection and try again.'));
+            input.value = '';
         }
+
+        // --- On page load: check server, then try auto-load from IndexedDB ---
+        async function checkInitialStatus() {
+            // 1. Server might already have the file (same session / same server process)
+            try {
+                const data = await (await fetch('/api/status')).json();
+                if (data.ready) { setLibraryReady('Library loaded ✓'); loadFilters(); return; }
+            } catch (e) {}
+
+            // 2. Try auto-load from a stored directory handle
+            if (!window.showDirectoryPicker) return; // Firefox: skip
+            const h = await loadRootHandle();
+            if (!h) return;
+
+            let perm;
+            try { perm = await h.queryPermission({ mode: 'read' }); } catch (e) { return; }
+
+            if (perm === 'granted') {
+                // Permission already granted — load silently
+                setConnectBtn('⏳ Loading library…', true);
+                const data = await findAndUpload(h);
+                if (data.success) {
+                    _cachedRootHandle = h;
+                    setLibraryReady('Library loaded ✓ (auto-loaded)');
+                    loadFilters();
+                } else {
+                    setConnectBtn('📂 Connect OneDrive Folder', false);
+                    setBannerStatus('Auto-load failed. Please reconnect.');
+                }
+            } else if (perm === 'prompt') {
+                // Need user gesture to request permission — show a single button
+                document.getElementById('upload-panel').innerHTML =
+                    '<p style="font-size:1.2rem;font-weight:bold;margin:0 0 0.5rem;">📚 Your library is linked — click to load it</p>' +
+                    '<p style="margin:0 0 1rem;font-size:1rem;">Your browser needs a quick confirmation to read your OneDrive folder.</p>' +
+                    '<button id="connect-btn" onclick="triggerStoredLoad()" style="display:inline-block;background:#005f40;color:white;border:none;padding:1.25rem 2.5rem;border-radius:6px;cursor:pointer;font-size:1.2rem;font-weight:bold;">📂 Load Library</button>' +
+                    '<div role="status" aria-live="polite" id="upload-status" style="margin-top:0.85rem;font-size:0.95rem;font-style:italic;"></div>';
+                window._pendingHandle = h;
+            }
+        }
+
+        window.triggerStoredLoad = async function () {
+            const h = window._pendingHandle;
+            if (!h) { connectOneDrive(); return; }
+            setConnectBtn('⏳ Loading…', true);
+            const perm = await h.requestPermission({ mode: 'read' });
+            if (perm !== 'granted') {
+                setConnectBtn('📂 Load Library', false);
+                setBannerStatus('Permission not granted.');
+                return;
+            }
+            _cachedRootHandle = h;
+            const data = await findAndUpload(h);
+            if (data.success) { setLibraryReady('Library loaded ✓'); loadFilters(); }
+            else { setConnectBtn('📂 Load Library', false); setBannerStatus(data.error || 'Could not load. Please reconnect.'); }
+        };
 
         function loadFilters() {
             fetch('/api/get_filters').then(r => r.json()).then(data => {
                 if (data.error && !data.groups.length) return;
                 const container = document.getElementById('group-buttons-container');
+                // Remove any previously added group buttons (keep "All References")
                 Array.from(container.querySelectorAll('.group-btn:not(#btn-all)')).forEach(b => b.remove());
                 data.groups.forEach(g => {
                     const b = document.createElement('button');
@@ -247,6 +478,7 @@
             });
         }
 
+        // --- NARRATOR ---
         function narrate(text) {
             if (!isNarratorActive) return;
             isMutedForSpeech = true;
@@ -259,16 +491,17 @@
 
         function toggleNarrator() {
             isNarratorActive = !isNarratorActive;
-            document.getElementById('btn-narrator').innerText = isNarratorActive ? "\uD83C\uDF99 Narrator On" : "\uD83C\uDF99 Narrator Off";
-            if (isNarratorActive) narrate("Narrator active.");
+            document.getElementById('btn-narrator').innerText = isNarratorActive ? "🎙 Narrator On" : "🎙 Narrator Off";
+            if (isNarratorActive) narrate("Narrator active. You can say 'Select' followed by a group name. Say 'Generate' to see your list.");
         }
 
+        // --- VOICE CONTROL ---
         function toggleVoiceControl() {
             if (!SpeechRec) { narrate("Voice control not supported."); return; }
             isVoiceActive = !isVoiceActive;
             const btn = document.getElementById('btn-voice');
-            if (isVoiceActive) { btn.innerText = "\uD83C\uDF99 Voice Control On"; if (!isNarratorActive) toggleNarrator(); startListening(); }
-            else { btn.innerText = "\uD83C\uDF99 Voice Control Off"; if (recognition) recognition.stop(); }
+            if (isVoiceActive) { btn.innerText = "🎤 Voice Control On"; if (!isNarratorActive) toggleNarrator(); startListening(); }
+            else { btn.innerText = "🎤 Voice Control Off"; if (recognition) recognition.stop(); }
         }
 
         function startListening() {
@@ -284,24 +517,40 @@
         }
 
         function handleSmartVoiceCommand(cmd) {
-            let clean = cmd.toLowerCase().replace(/[.,\/#!$%^&*;:{}=\-_`~()]/g, "")
-                           .replace(/\b(the|group|collection|folder|open|show|me)\b/g, '').trim();
+            let input = cmd.toLowerCase();
+            let clean = input.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+                             .replace(/\b(the|group|collection|folder|open|show|me)\b/g, '').trim();
+            if (clean.includes("plus") || clean.includes("+")) { clean = "lhon plus"; }
+            else if (/\b(lon|lawn|lhon)\b/.test(clean)) { clean = "lhon"; }
             if (!clean || clean.length < 2) return;
+
             const btns = Array.from(document.querySelectorAll('.group-btn')).sort((a, b) => b.innerText.length - a.innerText.length);
-            let match = btns.find(b => b.innerText.toLowerCase().trim() === clean) || btns.find(b => b.innerText.toLowerCase().includes(clean));
+            let match = btns.find(b => b.innerText.toLowerCase().trim() === clean.toLowerCase());
+            if (!match) match = btns.find(b => b.innerText.toLowerCase().includes(clean.toLowerCase()));
+
             if (match) { selectGroup(match.innerText); narrate("Selected " + match.innerText); }
-            else if (clean.includes("generate") || clean.includes("search")) { generateReferences(); }
-            else if (clean.includes("excel")) { exportExcel(); }
-            else if (clean.includes("back")) { prevFocus(); }
-            else if (clean.includes("next")) { nextFocus(); }
-            else if (clean.includes("clear")) { clearRefinements(); }
-            else { narrate("I heard " + clean + " but no match found."); }
+            else {
+                if (clean.includes("generate") || clean.includes("search")) { generateReferences(); return; }
+                if (clean.includes("excel")) { exportExcel(); return; }
+                if (clean.includes("back")) { prevFocus(); return; }
+                if (clean.includes("next")) { nextFocus(); return; }
+                if (clean.includes("clear")) { clearRefinements(); return; }
+                if (clean.includes("add keyword")) {
+                    let kw = clean.replace("add keyword", "").trim();
+                    document.getElementById('secondary-category').value = "Keyword";
+                    document.getElementById('secondary-value').value = kw;
+                    addSecondaryFilter(); narrate("Added keyword " + kw);
+                } else {
+                    narrate("I heard " + clean + ", but I don't see a match for that.");
+                }
+            }
         }
 
+        // --- CORE UI ---
         function changeFontSize(v) { currentFontSize += v; document.documentElement.style.setProperty('--user-font-size', currentFontSize + 'px'); }
         function toggleFocusMode() {
             document.body.classList.toggle('focus-mode');
-            if (document.body.classList.contains('focus-mode')) { currentFocusStep = 0; updateFocusView(); }
+            if (document.body.classList.contains('focus-mode')) { currentFocusStep = 0; updateFocusView(); narrate("Focus mode on."); }
         }
         function toggleHighContrast() { document.body.classList.toggle('high-contrast'); }
 
@@ -339,14 +588,14 @@
             redrawChips();
         }
 
-        function clearRefinements() { activeFilters = activeFilters.filter(f => f.type === 'Primary'); redrawChips(); }
+        function clearRefinements() { activeFilters = activeFilters.filter(f => f.type === 'Primary'); redrawChips(); narrate("Filters cleared."); }
 
         function redrawChips() {
             const container = document.getElementById('chip-area'); container.innerHTML = '';
             activeFilters.forEach(f => {
                 const chip = document.createElement('div');
                 chip.style.cssText = "background:#e0e7e4; color:#005f40; padding:0.4rem 0.8rem; border-radius:2rem; font-weight:bold; border:1px solid #005f40;";
-                chip.innerText = f.type === 'Primary' ? f.value : f.category + ': ' + f.value;
+                chip.innerText = f.type === 'Primary' ? f.value : `${f.category}: ${f.value}`;
                 container.appendChild(chip);
             });
         }
@@ -366,13 +615,15 @@
         function copyRichText() {
             const el = document.getElementById('results-area');
             const blobHtml = new Blob([el.innerHTML], { type: "text/html" });
-            navigator.clipboard.write([new ClipboardItem({ "text/html": blobHtml, "text/plain": new Blob([el.innerText], { type: "text/plain" }) })]).then(() => alert("Copied!"));
+            const data = [new ClipboardItem({ "text/html": blobHtml, "text/plain": new Blob([el.innerText], { type: "text/plain" }) })];
+            navigator.clipboard.write(data).then(() => alert("Copied!"));
         }
 
         function exportExcel() {
             fetch('/api/export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filters: activeFilters }) })
                 .then(r => r.blob()).then(blob => {
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = "Lanzi_Lab_References.xlsx"; a.click();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = "Lanzi_Lab_References.xlsx"; a.click();
                 });
         }
 
@@ -384,7 +635,8 @@
         function prevFocus() { currentFocusStep--; updateFocusView(); }
         function updateFocusView() { document.querySelectorAll('.focus-section').forEach((s, i) => s.classList.toggle('active-focus', i === currentFocusStep)); }
 
-        document.addEventListener("DOMContentLoaded", pollStatus);
+        // Start polling on load
+        document.addEventListener("DOMContentLoaded", checkInitialStatus);
     </script>
 </body>
 </html>
