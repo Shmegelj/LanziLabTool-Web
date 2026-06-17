@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: lanzilab-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: AZURE_TENANT_ID
+        sync: false
+      - key: AZURE_CLIENT_ID
+        sync: false
+      - key: AZURE_CLIENT_SECRET
+        sync: false
+      - key: ONEDRIVE_GROUP_NAME
+        value: GRP-IWTSC
+      - key: ONEDRIVE_FILE_PATH
+        value: "EndNote Resource Library/IWTSC Endnote Library.Data/sdb/sdb.eni"
