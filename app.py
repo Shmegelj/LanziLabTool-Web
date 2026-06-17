@@ -12,7 +12,7 @@ from flask import Flask, render_template, request, jsonify, send_file
 app = Flask(__name__)
 
 TEMP_DB = "/tmp/shadow_library.eni"
-DB_STATUS = {"ready": False, "message": "Starting up — syncing from OneDrive...", "last_sync": None}
+DB_STATUS = {"ready": False, "message": "upload_needed", "last_sync": None}
 
 # --- ONEDRIVE / AZURE CONFIG (set as Render environment variables) ---
 AZURE_TENANT_ID    = os.environ.get('AZURE_TENANT_ID', '')
@@ -27,6 +27,10 @@ REF_TYPE_MAP = {
     'Web Page': 31, 'Thesis': 32, 'Conference Paper': 47, 'Report': 27
 }
 
+
+# ---------------------------------------------------------------------------
+# OneDrive sync via Microsoft Graph API
+# ---------------------------------------------------------------------------
 
 def get_graph_token():
     import msal
@@ -60,6 +64,7 @@ def sync_from_onedrive():
         token = get_graph_token()
         headers = {'Authorization': f'Bearer {token}'}
 
+        # Find the Microsoft 365 group
         resp = requests.get(
             f"https://graph.microsoft.com/v1.0/groups"
             f"?$filter=startswith(displayName,'{ONEDRIVE_GROUP_NAME}')&$select=id,displayName",
@@ -76,6 +81,7 @@ def sync_from_onedrive():
 
         group_id = groups[0]['id']
 
+        # Download the .eni database file
         file_url = (
             f"https://graph.microsoft.com/v1.0/groups/{group_id}"
             f"/drive/root:/{ONEDRIVE_FILE_PATH}:/content"
@@ -104,6 +110,10 @@ def sync_from_onedrive():
         DB_STATUS = {"ready": False, "message": f"Sync error: {e}", "last_sync": None}
         return False
 
+
+# ---------------------------------------------------------------------------
+# Reference formatting helpers (unchanged from desktop)
+# ---------------------------------------------------------------------------
 
 def format_authors(raw_author_string, format_type):
     if not raw_author_string:
@@ -176,6 +186,10 @@ def build_search_query(filters, for_excel=False):
     return query, params
 
 
+# ---------------------------------------------------------------------------
+# Flask routes
+# ---------------------------------------------------------------------------
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -192,10 +206,29 @@ def manual_sync():
     return jsonify({"message": "Sync started..."})
 
 
+@app.route('/api/upload', methods=['POST'])
+def upload_library():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    f = request.files['file']
+    if not f.filename.lower().endswith('.eni'):
+        return jsonify({"error": "Please upload a .eni file (the library database file)"}), 400
+    try:
+        f.save(TEMP_DB)
+        DB_STATUS["ready"] = True
+        DB_STATUS["message"] = "Library uploaded successfully."
+        DB_STATUS["last_sync"] = time.strftime('%Y-%m-%d %H:%M UTC')
+        return jsonify({"success": True})
+    except Exception as e:
+        DB_STATUS["ready"] = False
+        DB_STATUS["message"] = f"Upload error: {e}"
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/get_filters')
 def get_filters():
     if not DB_STATUS['ready']:
-        return jsonify({"groups": [], "error": DB_STATUS['message']})
+        return jsonify({"groups": [], "error": DH_STATUS['message']})
     try:
         conn = sqlite3.connect(TEMP_DB)
         cursor = conn.cursor()
@@ -223,7 +256,7 @@ def get_filters():
 @app.route('/api/generate', methods=['POST'])
 def generate_refs():
     if not DB_STATUS['ready']:
-        return jsonify({"html": f"<em>{DB_STATUS['message']}</em>", "count": 0})
+        return jsonify({"html": f"<em>{DB_STATUS.get('message', 'Library not loaded')}</em>", "count": 0})
     data = request.json
     format_type = data.get('format', 'APA')
     filters = data.get('filters', [])
@@ -291,11 +324,19 @@ def export_excel():
 
 @app.route('/api/download_pdfs', methods=['POST'])
 def download_pdfs():
+    # PDF files live in OneDrive locally; not available in the web version.
     return jsonify({"error": "pdf_unavailable"}), 501
 
 
+# ---------------------------------------------------------------------------
+# Auto-sync on startup (background thread so Flask starts immediately)
+# ---------------------------------------------------------------------------
+
 def _startup_sync():
     time.sleep(3)
+    # Skip sync if Azure credentials are not real
+    if AZURE_TENANT_ID in ('', 'placeholder') or AZURE_CLIENT_ID in ('', 'placeholder'):
+        return  # Waiting for manual file upload
     sync_from_onedrive()
 
 Thread(target=_startup_sync, daemon=True).start()
